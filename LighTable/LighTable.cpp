@@ -9,6 +9,19 @@
 #include "Serial.hpp"
 #include "ArduinoLEDStripController.h"
 
+/*
+ * Post:
+ * 
+ * A while ago I bought a bunch of materials for a DIY ambient monitor lighting setup, which worked out to be a waste of money. 6 days ago I started to repurpose those parts into something cooler:
+
+I've currently got code to capture Windows' audio output, code to communicate with my Arduino, and code to control the colors of the lighting kit for the LED strips. My goal? A kick-ass desk that lights up according to whatever you're playing from your speakers.
+
+I'm currently setting the system up to have a bunch of different coloring systems that change for an even better light show. I ordered velcro strips to attach the LEDs to my desk. This thing's going to be the SHEEEEEYIT
+
+All my code is currently on Github, you can check it out here:
+
+ */
+
 #pragma comment (lib, "Core.lib")
 
 void ProcessStereoAudioToMonoAudio( float * stereoAudio, float * monoAudio, size_t stereoBufferCount )
@@ -44,7 +57,7 @@ int main( int argc, char * argv[] )
 	float r_target = r, g_target = g, b_target = b;
 
 	float  transitionSpeed = 0.001f,
-		transitionSpeedFade = 0.01f,
+		transitionSpeedFade = 0.02f,
 		minTransitionSpeed = 0.002f,
 		maxTransitionSpeed = 0.1f;
 	
@@ -73,19 +86,12 @@ int main( int argc, char * argv[] )
 		//	Always decrease brightness slightly
 		brightness -= 0.001f;
 		brightness = max( brightness, 0.0f );
-
-		//	Increase our brightness if we've hit a threshold
-		if( maxAmplitude > 0.2f )
-			brightness += 0.5f;
-
+		//	Increase brightness based on audio
+		brightness = max( brightness, maxAmplitude * 2.0f );
 		brightness = min( 1.0f, brightness );
 
 		//	Change our color transition speed based on audio
-		if( maxAmplitude > 0.4f )
-		{
-			std::cout << "Passed threshold!" << std::endl;
-			transitionSpeed += 0.07f;
-		}
+		transitionSpeed += 0.25f * pow( maxAmplitude, 2.f );
 
 		transitionSpeed -= transitionSpeedFade;
 
