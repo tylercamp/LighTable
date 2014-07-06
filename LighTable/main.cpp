@@ -7,6 +7,7 @@
 
 int main( )
 {
+	SetColorMode( 2 );
 	StartLighTable( "COM3" );
 	std::cin.get( );
 	StopLighTable( );

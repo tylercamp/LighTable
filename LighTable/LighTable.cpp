@@ -258,7 +258,7 @@ void LogicThread( LogicData * data )
 
 		switch( data->Mode )
 		{
-			case(LogicData::MODE_HUECYCLE_DIVERSE) :
+			case( LogicData::MODE_HUECYCLE_DIVERSE ) :
 			{
 				for( int i = 0; i < N_LEDS; i++ )
 				{
@@ -358,6 +358,7 @@ LighTable::LighTable( )
 	m_StripController = nullptr;
 	m_ThreadLogicData = nullptr;
 	m_ColorMode = LogicData::MODE_MONOCOLOR_RANDOM;
+	m_IsRunning = false;
 }
 
 LighTable::~LighTable( )

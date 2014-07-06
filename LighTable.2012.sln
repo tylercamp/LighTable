@@ -1,8 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-VisualStudioVersion = 11.0.0.0
-MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LighTable", "LighTable\LighTable.vcxproj", "{456B5085-5757-4F19-A478-75FA86352C61}"
 	ProjectSection(ProjectDependencies) = postProject
 		{ED656E5B-A2A0-4BAD-AE39-EB76A7E4FAFA} = {ED656E5B-A2A0-4BAD-AE39-EB76A7E4FAFA}
