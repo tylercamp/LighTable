@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Ports;
@@ -13,6 +14,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
@@ -95,11 +97,14 @@ namespace LighTable_UI
 
 			m_StartMenuItem = startMenuItem;
 			m_StopMenuItem = stopMenuItem;
-			
-			Icon lighTableIcon = new Icon("icon.ico");
 
-			this.Icon = BitmapFrame.Create(File.OpenRead("icon.ico"));
-			
+			String executableFileName = Process.GetCurrentProcess().MainModule.FileName;
+			executableFileName = executableFileName.Replace(".vshost", "");
+			Icon lighTableIcon = System.Drawing.Icon.ExtractAssociatedIcon(executableFileName);
+
+			this.Icon = Imaging.CreateBitmapSourceFromHIcon(
+				lighTableIcon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+
 			NotifyIcon notifyIcon = new NotifyIcon();
 			notifyIcon.Icon = lighTableIcon;
 			notifyIcon.Visible = true;
