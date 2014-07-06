@@ -6,6 +6,9 @@
 
 #include <cstdint>
 
+//	TODO: Shouldn't be a macro
+#define N_LEDS 50
+
 class LEDStripColorState
 {
 public:
@@ -19,7 +22,7 @@ public:
 	LEDStripColorState & operator=( const LEDStripColorState & other );
 
 private:
-	uint8_t m_ColorData[25][3];
+	uint8_t m_ColorData[N_LEDS][3];
 };
 
 //	Intended for use with the Adafruit RGB LED strand

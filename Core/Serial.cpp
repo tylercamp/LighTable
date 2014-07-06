@@ -1,7 +1,7 @@
 
 #include "Serial.hpp"
 
-Serial::Serial( char *portName )
+Serial::Serial( const char *portName )
 {
 	//We're not yet connected
 	this->connected = false;
@@ -18,16 +18,27 @@ Serial::Serial( char *portName )
 	//Check if the connection was successful
 	if( this->hSerial == INVALID_HANDLE_VALUE )
 	{
-		//If not success full display an Error
-		if( GetLastError( ) == ERROR_FILE_NOT_FOUND ){
+		DWORD lastError = GetLastError( );
 
-			//Print Error if necessary
-			printf( "ERROR: Handle was not attached. Reason: %s not available.\n", portName );
-
-		}
-		else
+		switch( lastError )
 		{
-			printf( "ERROR!!!" );
+			case(ERROR_FILE_NOT_FOUND) :
+			{
+				printf( "ERROR: Port '%s' does not exist.\n", portName );
+				break;
+			}
+
+			case(ERROR_ACCESS_DENIED) :
+			{
+				printf( "ERROR: Access to port '%s' was denied. Is it already in use?", portName );
+				break;
+			}
+
+			default:
+			{
+				printf( "ERROR: Unrecognized error. (%u). Check Window System Error Codes for more details on this error.", lastError );
+				break;
+			}
 		}
 	}
 	else
@@ -44,7 +55,7 @@ Serial::Serial( char *portName )
 		else
 		{
 			//Define serial connection parameters for the arduino board
-			dcbSerialParams.BaudRate = CBR_115200;
+			dcbSerialParams.BaudRate = CBR_256000;
 			dcbSerialParams.ByteSize = 8;
 			dcbSerialParams.StopBits = ONESTOPBIT;
 			dcbSerialParams.Parity = NOPARITY;

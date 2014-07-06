@@ -1,7 +1,9 @@
 obj/
+Debug/
+Release/
+bin/
 *.suo
 *.filters
 *.user
 *.ilk
-*.lib
 *.pdb

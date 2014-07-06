@@ -25,7 +25,7 @@ private:
 
 public:
 	//Initialize Serial communication with the given COM port
-	Serial( char *portName );
+	Serial( const char *portName );
 	//Close the connection
 	//NOTA: for some reason you can't connect again before exiting
 	//the program and running it again

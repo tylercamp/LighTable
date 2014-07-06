@@ -117,7 +117,7 @@ class kissfft
         void C_ADDTO( cpx_type & c,const cpx_type & a) { c+=a;}
         void C_FIXDIV( cpx_type & ,int ) {} // NO-OP for float types
         scalar_type S_MUL( const scalar_type & a,const scalar_type & b) { return a*b;}
-        scalar_type HALF_OF( const scalar_type & a) { return a*.5;}
+        scalar_type HALF_OF( const scalar_type & a) { return a*.5f;}
         void C_MULBYSCALAR(cpx_type & c,const scalar_type & a) {c*=a;}
 
         void kf_bfly2( cpx_type * Fout, const size_t fstride, int m)
@@ -264,7 +264,8 @@ class kissfft
             cpx_type * twiddles = &_twiddles[0];
             cpx_type t;
             int Norig = _nfft;
-            cpx_type scratchbuf[p];
+			//	!!! Modded for compiling in VS2013
+            cpx_type * scratchbuf = new cpx_type[p];
 
             for ( u=0; u<m; ++u ) {
                 k=u;
@@ -287,6 +288,8 @@ class kissfft
                     k += m;
                 }
             }
+
+			delete scratchbuf;
         }
 
         int _nfft;

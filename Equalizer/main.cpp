@@ -6,19 +6,19 @@
 #include <vector>
 #include <list>
 
+#include <thread>
+#include <mutex>
+
 #undef main
 
-#include "../Core/AudioCapture.hpp"
-#include "../Core/kissfft.hh"
+// #include "../Core/AudioCapture.hpp"
+// #include "../Core/kissfft.hh"
+
+#include "../Core/RealtimeAudioAnalyzer.h"
 
 #pragma comment (lib, "SDL.lib")
 #pragma comment (lib, "Core.lib")
 #pragma comment (lib, "OpenGL32.lib")
-
-float RandomNorm( )
-{
-	return ((float)rand( )) / (float)RAND_MAX;
-}
 
 void ProcessStereoAudioToMonoAudio( float * stereoAudio, float * monoAudio, size_t stereoBufferCount )
 {
@@ -28,68 +28,129 @@ void ProcessStereoAudioToMonoAudio( float * stereoAudio, float * monoAudio, size
 	}
 }
 
-// float VectorAverage( const std::vector<float> & vector )
-// {
-// 	if( vector.size( ) == 0 )
-// 		return 0.0f;
-// 
-// 	float average = 0.0f;
-// 	for( float value : vector )
-// 		average += value;
-// 	return average / vector.size( );
-// }
-
-// void ShiftVector( std::vector<float> & vector )
-// {
-// 	for( int i = 0; i < vector.size( ) - 1; i++ )
-// 		vector[i] = vector[i + 1];
-// 	vector.pop_back( );
-// }
-
-void GenerateCompositeWaveform( const std::list<std::vector<float>> & sourceWaveSessions, float ** outputBuffer, std::size_t * outputCount )
+void ShiftBuffer( float * buffer, size_t bufferSize, size_t shiftCount )
 {
-	std::size_t size = 0;
-	for( auto & session : sourceWaveSessions )
-		size += session.size( );
-
-	float * result = new float[size];
-	std::size_t progression = 0;
-	for( auto & session : sourceWaveSessions )
+	if( shiftCount < bufferSize )
 	{
-		memcpy( result + progression, session.data( ), sizeof( float ) * session.size( ) );
-		progression += session.size( );
+		for( size_t i = bufferSize - 1; i >= shiftCount; i-- )
+			buffer[i] = buffer[i - shiftCount];
 	}
 
-	*outputBuffer = result;
-	*outputCount = size;
+	//	Clear newly-unused indices
+	for( size_t i = 0; i < shiftCount && i < bufferSize; i++ )
+		buffer[i] = 0.0f;
 }
 
-
-
-//int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int )
-int main( )
+struct RunData
 {
-	CoInitializeEx( nullptr, COINIT_SPEED_OVER_MEMORY );
-	AudioCaptureSource * captureSource = new AudioCaptureSource( );
+	float * TargetBuffer;
+	size_t BufferCount;
+	std::mutex AccessMutex;
+	bool ContinueCapture;
+	bool IsFull;
+};
+
+bool FindWindowIndices( float * buffer, size_t bufferCount, size_t * windowBegin, size_t * windowEnd, float valueTolerance = 0.01f, float dyTolerance = 0.3f )
+{
+	//	Loop limit of bufferCount / 2 to prevent lop-sided windows
+
+	for( size_t i_left = 0; i_left < bufferCount / 2; i_left++ )
+	{
+		for( size_t i_right = bufferCount - 1; i_right >= bufferCount / 2; i_right-- )
+		{
+			if( fabsf( buffer[i_left] - buffer[i_right] ) <= valueTolerance )
+			{
+				//	Found two y's practically equivalent
+
+				float dy_left = buffer[i_left + 1] - buffer[i_left];
+				float dy_right = buffer[i_right] - buffer[i_right - 1];
+
+				//	Check to see if their deltas are similar
+				if( fabsf( dy_left - dy_right ) <= dyTolerance )
+				{
+					//	Found a good enough window
+					if( windowBegin )
+						*windowBegin = i_left;
+					if( windowEnd )
+						*windowEnd = i_right;
+
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+// void CaptureThread( RunData * runData )
+// {
+// 	CoInitializeEx( nullptr, COINIT_SPEED_OVER_MEMORY );
+// 	AudioCaptureSource * captureSource = new AudioCaptureSource( );
+// 
+// 	float rawBuffer[3000];
+// 	float monoBuffer[1500];
+// 
+// 	size_t floatsRead = 0;
+// 
+// 	//	NOTE: Windowing function may be necessary (overlap function would be preferable - starting from each end, try to find dy (for dy/dt) that are equal
+// 	//		with largest window
+// 	while( runData->ContinueCapture )
+// 	{
+// 		size_t readByteCount = captureSource->ReadData( (uint8_t *)rawBuffer, sizeof( rawBuffer ) );
+// 		if( readByteCount > 0 )
+// 		{
+// 			size_t numFloats = readByteCount / sizeof( float );
+// 			size_t numFrames = numFloats / 2; // always assume stereo
+// 
+// 			ProcessStereoAudioToMonoAudio( rawBuffer, monoBuffer, numFloats );
+// 
+// 			{
+// 				std::lock_guard<std::mutex> lock( runData->AccessMutex );
+// 
+// 				ShiftBuffer( runData->TargetBuffer, runData->BufferCount, numFrames );
+// 				for( size_t i = 0; i < numFrames && i < runData->BufferCount; i++ )
+// 					runData->TargetBuffer[i] = monoBuffer[i];
+// 			}
+// 
+// 			floatsRead += numFrames;
+// 			runData->IsFull = floatsRead >= runData->BufferCount;
+// 		}
+// 	}
+// 
+// 	CoUninitialize( );
+// }
+
+#define PI 3.1415926535897
+
+int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int )
+//int main( )
+{
+// 	RunData runData;
+// 	runData.BufferCount = 4096;
+// 	runData.TargetBuffer = new float[runData.BufferCount];
+// 	runData.ContinueCapture = true;
+// 	runData.IsFull = false;
+// 
+// 	ZeroMemory( runData.TargetBuffer, sizeof( float ) * runData.BufferCount );
+
+	//std::thread captureThread( CaptureThread, &runData );
+
+	size_t bufferCount = 1024;
+	RealtimeAudioInstance * realtimeAudio = new RealtimeAudioInstance( bufferCount );
+
 
 	SDL_Init( SDL_INIT_VIDEO );
-	SDL_SetVideoMode( 800, 600, 32, SDL_OPENGL );
+	SDL_SetVideoMode( 800, 600, 32, SDL_OPENGL | SDL_RESIZABLE );
 
 	glMatrixMode( GL_PROJECTION );
-	glOrtho( 0, 1, 0, 10, 0, 1 );
+	glOrtho( 0, 1, /* -2 */ 0, 2.5, 0, 1 );
 
 	glClearColor( 0.2f, 0.2f, 0.2f, 0.0f );
 
-// 	size_t lastSize = -1;
-// 
-// 	int runningAverageLength = 1;
-// 
-// 	std::vector<float> runningAverages[2000];
-// 	for( int i = 0; i < 2000; i++ )
-// 		runningAverages[i].reserve( runningAverageLength + 1 );
+	//float * renderBuffer = new float[runData.BufferCount];
 
-	size_t maxSessions = 10;
-	std::list<std::vector<float>> waveSessions;
+	size_t windowableCount = 0;
 
 	bool run = true;
 	while( run )
@@ -100,94 +161,75 @@ int main( )
 		{
 			if( event.type == SDL_QUIT )
 				run = false;
+
+			if( event.type == SDL_VIDEORESIZE )
+			{
+				glViewport( 0, 0, event.resize.w, event.resize.h );
+			}
 		}
 
-		float rawAudioBuffer[2048];
-		size_t numBytesReceived = captureSource->ReadData( (uint8_t *)rawAudioBuffer, sizeof( rawAudioBuffer ) );
-		float monoAudioBuffer[1024];
-		size_t numFrames = numBytesReceived / 8; // bytes / sizeof(float) / numChannels
-
-		ProcessStereoAudioToMonoAudio( rawAudioBuffer, monoAudioBuffer, numFrames * 2 );
-
-		kissfft<float>::cpx_type * sourceData = nullptr;
-		kissfft<float>::cpx_type * destData = nullptr;
-
-		if( numFrames > 0 )
-		{
-			glClear( GL_COLOR_BUFFER_BIT );
-
-			//	Append the audio session
-			std::vector<float> currentSession; currentSession.reserve( numFrames );
-			for( size_t i = 0; i < numFrames; i++ )
-				currentSession.push_back( monoAudioBuffer[i] );
-			waveSessions.push_back( currentSession );
-
-			if( waveSessions.size( ) > maxSessions )
-				waveSessions.pop_front( );
-			else
-				//	Move on to capture next session, we want a full session buffer before transforming
-				continue;
-
-			//	Composite all sessions
-			float * resultCompositeBuffer;
-			std::size_t compositeBufferCount;
-			GenerateCompositeWaveform( waveSessions, &resultCompositeBuffer, &compositeBufferCount );
-
-			sourceData = new kissfft<float>::cpx_type[compositeBufferCount];
-			destData = new kissfft<float>::cpx_type[compositeBufferCount];
-
-			kissfft<float> fft( compositeBufferCount, false );
-
-			for( int i = 0; i < compositeBufferCount; i++ )
-			{
-				sourceData[i].real( resultCompositeBuffer[i] );
-				sourceData[i].imag( 0.0f );
-			}
-
-			fft.transform( sourceData, destData );
-
-			//	Delete composite buffer (will be regenerated next session)
-			delete resultCompositeBuffer;
-
-			//	Add transformed data to running averages
-// 			for( int i = 0; i < numFrames; i++ )
 // 			{
-// 				runningAverages[i].push_back( destData[i].real( ) );
-// 				if( runningAverages[i].size( ) > runningAverageLength )
-// 					ShiftVector( runningAverages[i] );
+// 				std::lock_guard<std::mutex> lock( runData.AccessMutex );
+// 				memcpy( renderBuffer, runData.TargetBuffer, sizeof( float ) * runData.BufferCount );
 // 			}
 
-			float channelWidth = 1.0f / (compositeBufferCount / 2);
+		glClear( GL_COLOR_BUFFER_BIT );
 
-			glBegin( GL_QUADS );
-			glColor3f( 1.0f, 1.0f, 1.0f );
-			//	Start at 1 to skip DC line
-			for( int i = 1; i < numFrames; i++ )
-			{
-				glVertex2f( i * channelWidth, 0.0f );
-				glVertex2f( i * channelWidth, destData[i].real( ));
-				glVertex2f( (i + 1)*channelWidth, destData[i].real( ) );
-				glVertex2f( (i + 1)*channelWidth, 0.0f );
-			}
-			glEnd( );
+// 			kissfft<float>::cpx_type * sourceData = nullptr;
+// 			kissfft<float>::cpx_type * destData = nullptr;
+// 
+// 			sourceData = new kissfft<float>::cpx_type[runData.BufferCount];
+// 			destData = new kissfft<float>::cpx_type[runData.BufferCount];
+// 
+// 			kissfft<float> fft( runData.BufferCount, false );
+// 
+// 			for( int i = 0; i < runData.BufferCount; i++ )
+// 			{
+// 				float val = renderBuffer[i];
+// 				sourceData[i].real( val );
+// 				sourceData[i].imag( 0.0f );
+// 			}
+// 
+// 			fft.transform( sourceData, destData );
 
-			delete sourceData;
-			delete destData;
+		FrameInstance * currentFrame = realtimeAudio->CaptureCurrentAudioFrame( );
+		auto fft = currentFrame->GetFFT( );
+
+		float channelWidth = 1.0f / (bufferCount / 2);
+
+		glBegin( GL_QUADS );
+		glColor3f( 1.0f, 1.0f, 1.0f );
+		//	Start at 1 to skip DC line
+		for( int i = 1; i < bufferCount / 2; i++ )
+		{
+			//float height = log10f( destData[i].real( ) );
+			//float height /* = destData[i].real( ) */;
+			//height = fabsf( height );
+			float height = fft.GetBin( i );
+			//	Played a bunch with this equation until the visualization looked "usable"
+			height = log10f ( fft.GetBin( i ) );
+				
+			glVertex2f( i * channelWidth, 0.0f );
+			glVertex2f( i * channelWidth, height );
+			glVertex2f( (i + 1)*channelWidth, height );
+			glVertex2f( (i + 1)*channelWidth, 0.0f );
 		}
+		glEnd( );
 
-// 		if( lastSize != -1 && lastSize != numFrames && numFrames > 0 )
-// 			__debugbreak( );
-//
-// 		if( numFrames > 0 )
-// 			lastSize = numFrames;
+// 			delete sourceData;
+// 			delete destData;
+
+		delete currentFrame;
 
 		SDL_GL_SwapBuffers( );
 	}
 
 	SDL_Quit( );
 
-	delete captureSource;
-	CoUninitialize( );
+	delete realtimeAudio;
+
+// 	runData.ContinueCapture = false;
+// 	captureThread.join( );
 
 	return 0;
 }
