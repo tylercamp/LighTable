@@ -7,9 +7,7 @@ This version captures Windows audio output, processes the audio on the PC, and s
 Intended for use with the Adafruit "12mm Diffused Thin Digital RGB LED Pixels (Strand of 25)":
 https://www.adafruit.com/products/322
 
-Uses the Arduino program from the Adafruit DIY Ambient Monitor Backlight project:
-https://learn.adafruit.com/adalight-diy-ambient-tv-lighting/download-and-install
-...
+Uses a modified version of the Arduino program from the Adafruit DIY Ambient Monitor Backlight project:
 https://github.com/adafruit/Adalight/blob/master/Arduino/LEDstream/LEDstream.pde
 
 
