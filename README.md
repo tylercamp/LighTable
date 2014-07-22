@@ -11,8 +11,13 @@ Uses a modified version of the Arduino program from the Adafruit DIY Ambient Mon
 https://github.com/adafruit/Adalight/blob/master/Arduino/LEDstream/LEDstream.pde
 
 
-Binaries can be found in Release/Debug. There is currently no intent to support platforms other than Windows.
+Binaries can be downloaded by downloading the "Executable.zip" file.
 
 
 
-Currently uses very basic processing (only via signal amplitude and random color selection) to change lighting to the music. Future versions are intended to support much more dynamic behaviors, as is mentioned in the file 'LighTable/VisualizationStateController.h'.
+Currently uses very basic processing (only via signal amplitude) to change lighting to the music. There are only two modes for color selection:
+
+- Mono-Color Random: A random RGB color is selected and the LEDs move towards that color based on the "pace" of the music. All LEDs are the same color. Brightness is determined by overall loudness of the music.
+- Hue-Cycle Diverse: HSV colors are employed, LEDs maintain constant saturation and cycle through hues based on the "pace" of the music. The hue of each LED is relatively varied from one to the next. Brightness is determined by overall loudness of the music.
+
+Future versions are intended to support much more dynamic behaviors, as is mentioned in the file 'LighTable/VisualizationStateController.h'.
