@@ -1,5 +1,8 @@
 LighTable
 =========
+Simple Windows program to capture audio and control an arduino to make a LED music visualizer.
+
+=========
 A personal project inspired by a previous Arduino-based visualizer. I originally bought a DIY Ambient Backlight kit from Adafruit, only to find that its poor performance didn't make it worth the cost. I instead decided to repurpose it into something a bit more fun.
 
 This version captures Windows audio output, processes the audio on the PC, and streams LED color data to the arduino for rendering.
